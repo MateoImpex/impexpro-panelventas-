@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Impexpro Shop · Panel Comparativo · 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0e14;--surface:#13161f;--surface2:#1c2030;--surface3:#242840;
+  --border:#252a3d;--border2:#1e2235;
+  --abril:#ffe033;--abril-dim:rgba(255,224,51,0.15);
+  --mayo:#3ecfcf;--mayo-dim:rgba(62,207,207,0.15);
+  --green:#34d399;--red:#f87171;--purple:#a78bfa;--orange:#fb923c;
+  --text:#e8eaf6;--text-muted:#6b7290;--text-dim:#3d4260;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* TOPBAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:200;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.brand-logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--abril),#ff9500);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#000}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.brand-sub{font-size:11px;color:var(--text-muted);margin-top:1px}
+
+.tabs{display:flex;gap:2px;background:var(--bg);border-radius:8px;padding:3px;overflow-x:auto}
+.tab{padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-muted);border:none;background:none;transition:all .18s;white-space:nowrap}
+.tab.active{background:var(--surface2);color:var(--text);font-weight:600}
+.tab:hover:not(.active){color:var(--text)}
+
+/* MONTH FILTER BUTTONS */
+.month-filters{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.mf-btn{
+  font-size:11px;font-weight:700;padding:5px 14px;border-radius:8px;
+  font-family:'DM Mono',monospace;letter-spacing:.04em;cursor:pointer;
+  border:2px solid transparent;transition:all .2s;
+}
+.mf-btn.abril{
+  background:var(--abril-dim);color:var(--abril);border-color:rgba(255,224,51,.25);
+}
+.mf-btn.abril:hover,.mf-btn.abril.active{
+  background:rgba(255,224,51,.25);border-color:var(--abril);box-shadow:0 0 0 3px rgba(255,224,51,.1);
+}
+.mf-btn.mayo{
+  background:var(--mayo-dim);color:var(--mayo);border-color:rgba(62,207,207,.25);
+}
+.mf-btn.mayo:hover,.mf-btn.mayo.active{
+  background:rgba(62,207,207,.25);border-color:var(--mayo);box-shadow:0 0 0 3px rgba(62,207,207,.1);
+}
+.mf-btn.ambos{
+  background:var(--surface2);color:var(--text-muted);border-color:var(--border);
+}
+.mf-btn.ambos.active{
+  background:var(--surface3);color:var(--text);border-color:var(--border);
+}
+.mf-label{font-size:10px;color:var(--text-dim);font-weight:500;white-space:nowrap}
+
+/* LAYOUT */
+.wrap{max-width:1440px;margin:0 auto;padding:28px}
+.panel{display:none}.panel.active{display:block}
+.sec{margin-bottom:36px}
+.sec-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border2)}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px}
+
+/* KPI */
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;transition:all .3s}
+.kpi-stripe{position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-tag{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+.kpi-val{font-size:24px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;letter-spacing:-.5px;transition:all .3s}
+.kpi-meta{font-size:11px;color:var(--text-muted);margin-top:5px}
+.kpi-delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;margin-top:6px}
+.kpi-delta.up{background:rgba(52,211,153,.12);color:var(--green)}
+.kpi-delta.down{background:rgba(248,113,113,.12);color:var(--red)}
+.kpi-delta.neu{background:rgba(107,114,144,.12);color:var(--text-muted)}
+
+/* CMP CARD */
+.cmp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:all .3s}
+.cmp-header{padding:14px 18px 0;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.cmp-body{display:grid;grid-template-columns:1fr 1fr}
+.cmp-body.single{grid-template-columns:1fr}
+.cmp-side{padding:12px 18px 16px}
+.cmp-side.a{border-right:1px solid var(--border2)}
+.cmp-month{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.cmp-month.a{color:var(--abril)}.cmp-month.m{color:var(--mayo)}
+.cmp-num{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;line-height:1}
+.cmp-sub{font-size:11px;color:var(--text-muted);margin-top:3px}
+.cmp-bar-wrap{height:4px;background:var(--surface3);border-radius:2px;margin-top:8px;overflow:hidden}
+.cmp-bar-fill{height:100%;border-radius:2px}
+
+/* CHART */
+.ch{position:relative}
+.ch-sm{height:180px}.ch-md{height:240px}.ch-lg{height:300px}.ch-xl{height:360px}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border)}
+td{padding:9px 12px;border-bottom:1px solid var(--border2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.mono{font-family:'DM Mono',monospace}
+.badge{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;background:var(--surface2);color:var(--text-muted)}
+
+/* SUPER ROW */
+.super-row{display:grid;grid-template-columns:180px 1fr 1fr 90px;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border2)}
+.super-row:last-child{border-bottom:none}
+.sr-label{font-size:12px;color:var(--text-muted)}
+.sr-a{font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--abril);text-align:right}
+.sr-m{font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--mayo);text-align:right}
+.sr-delta{font-size:11px;font-weight:700;font-family:'DM Mono',monospace;text-align:center;padding:2px 8px;border-radius:4px}
+
+.notice{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--purple);margin-bottom:20px}
+
+/* MARKETPLACE FILTER */
+.mp-filter{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.mp-btn{padding:5px 14px;font-size:11px;font-weight:600;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.mp-btn.active-ml{background:var(--abril-dim);color:var(--abril);border-color:rgba(255,224,51,.3)}
+.mp-btn.active-tn{background:var(--mayo-dim);color:var(--mayo);border-color:rgba(62,207,207,.3)}
+.mp-btn.active-all{background:var(--surface2);color:var(--text);border-color:var(--border)}
+
+/* PROV */
+.prov-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.prov-name{width:160px;font-size:12px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prov-bar-bg{flex:1;height:5px;border-radius:3px;background:var(--surface3)}
+.prov-fill{height:100%;border-radius:3px;transition:width .6s}
+.prov-num{font-size:10px;font-family:'DM Mono',monospace;color:var(--text-muted);width:85px;text-align:right;flex-shrink:0}
+
+/* FILTER CONTEXT BANNER */
+.ctx-banner{display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:8px;margin-bottom:20px;font-size:12px;font-weight:600;transition:all .3s}
+.ctx-banner.abril{background:var(--abril-dim);color:var(--abril);border:1px solid rgba(255,224,51,.2)}
+.ctx-banner.mayo{background:var(--mayo-dim);color:var(--mayo);border:1px solid rgba(62,207,207,.2)}
+.ctx-banner.ambos{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+
+/* HIDDEN */
+.hide{display:none!important}
+
+@media(max-width:1000px){
+  .g4{grid-template-columns:1fr 1fr}.g3,.g2{grid-template-columns:1fr}
+  .wrap{padding:16px}.topbar{padding:0 12px;flex-wrap:wrap;height:auto;padding-top:8px;padding-bottom:8px;gap:8px}
+  .super-row{grid-template-columns:1fr 1fr;gap:6px}
+  .month-filters .mf-label{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-logo">IP</div>
+    <div>
+      <div class="brand-name">Impexpro Shop</div>
+      <div class="brand-sub">Panel de Ventas · ML + TN · 2026</div>
+    </div>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" onclick="nav(this,'resumen')">📊 Resumen</button>
+    <button class="tab" onclick="nav(this,'comparativo')">⚖️ Comparativo</button>
+    <button class="tab" onclick="nav(this,'diario')">📅 Diario</button>
+    <button class="tab" onclick="nav(this,'semanal')">📆 Semanal</button>
+    <button class="tab" onclick="nav(this,'productos')">📦 Productos</button>
+    <button class="tab" onclick="nav(this,'geo')">🗺 Geo</button>
+  </nav>
+  <div class="month-filters">
+    <span class="mf-label">Filtrar por mes →</span>
+    <button class="mf-btn ambos active" id="mf-ambos" onclick="setMes('ambos')">⚖ Ambos</button>
+    <button class="mf-btn abril" id="mf-abril" onclick="setMes('abril')">ABR 2026</button>
+    <button class="mf-btn mayo" id="mf-mayo" onclick="setMes('mayo')">MAY 1–18</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ===== RESUMEN ===== -->
+<div class="panel active" id="panel-resumen">
+
+  <div id="ctx-resumen" class="ctx-banner ambos">⚖ Mostrando ambos meses — Abril 2026 completo + Mayo 2026 (1–18)</div>
+
+  <div class="sec">
+    <div class="sec-title">Ingresos totales combinados ML + TN</div>
+    <div class="g4">
+      <div class="kpi">
+        <div class="kpi-stripe" style="background:linear-gradient(90deg,var(--abril),var(--mayo))"></div>
+        <div class="kpi-tag">Total del período</div>
+        <div class="kpi-val" id="kpi-total" style="color:var(--text)">$84.96M / $97.39M</div>
+        <div class="kpi-meta" id="kpi-total-sub">Abril / Mayo</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-stripe" style="background:var(--abril)"></div>
+        <div class="kpi-tag">🛒 ML</div>
+        <div class="kpi-val" id="kpi-ml" style="color:var(--abril)">$58.05M / $59.03M</div>
+        <div class="kpi-meta" id="kpi-ml-sub">788 / 639 órdenes</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-stripe" style="background:var(--mayo)"></div>
+        <div class="kpi-tag">🏪 TN</div>
+        <div class="kpi-val" id="kpi-tn" style="color:var(--mayo)">$26.91M / $38.35M</div>
+        <div class="kpi-meta" id="kpi-tn-sub">114 / 137 órdenes</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-stripe" style="background:linear-gradient(90deg,var(--abril),var(--mayo))"></div>
+        <div class="kpi-tag">Ingreso/día</div>
+        <div class="kpi-val" id="kpi-dia" style="color:var(--text)">$2.83M / $5.41M</div>
+        <div class="kpi-meta" id="kpi-dia-sub">Combinado Abril / Mayo</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-evolucion">
+    <div class="sec-title" id="evol-title">Evolución diaria — Abril vs Mayo (4 canales)</div>
+    <div class="card">
+      <div id="evol-legend" style="display:flex;gap:20px;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:24px;height:3px;background:var(--abril);border-radius:2px"></div>Abril ML</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:24px;height:3px;background:#ffb020;border-radius:2px"></div>Abril TN</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:24px;height:3px;background:var(--mayo);border-radius:2px"></div>Mayo ML</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:24px;height:3px;background:#2aa8a8;border-radius:2px"></div>Mayo TN</div>
+      </div>
+      <div class="ch ch-xl"><canvas id="cOverlay"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title" id="stack-title">Ingresos apilados ML + TN por día</div>
+    <div class="card">
+      <div class="ch ch-lg"><canvas id="cStacked"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== COMPARATIVO ===== -->
+<div class="panel" id="panel-comparativo">
+  <div id="ctx-comp" class="ctx-banner ambos">⚖ Mostrando comparativa Abril vs Mayo</div>
+  <div class="sec">
+    <div class="sec-title">Métricas cara a cara</div>
+    <div class="g2">
+      <div class="card" id="cmp-table">
+        <div style="display:grid;grid-template-columns:180px 1fr 1fr 90px;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--border)">
+          <div></div><div style="text-align:right">ABRIL</div><div style="text-align:right">MAYO</div><div style="text-align:center">Δ</div>
+        </div>
+        <div style="font-size:10px;font-weight:700;color:var(--abril);letter-spacing:.08em;text-transform:uppercase;margin:12px 0 4px">🛒 Mercado Libre</div>
+        <div class="super-row"><div class="sr-label">Ingresos totales</div><div class="sr-a">$58.050.440</div><div class="sr-m">$59.033.618</div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">+1.7%</div></div>
+        <div class="super-row"><div class="sr-label">Órdenes</div><div class="sr-a">788</div><div class="sr-m">639 <small style="opacity:.5">18d</small></div><div class="sr-delta" style="background:rgba(107,114,144,.1);color:var(--text-muted)">18d</div></div>
+        <div class="super-row"><div class="sr-label">Ticket promedio</div><div class="sr-a">$73.668</div><div class="sr-m">$92.384</div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">+25.4%</div></div>
+        <div class="super-row"><div class="sr-label">Ingresos/día</div><div class="sr-a">$1.94M</div><div class="sr-m">$3.28M</div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">+69%</div></div>
+        <div class="super-row"><div class="sr-label">Mejor día</div><div class="sr-a">10/04 $3.77M</div><div class="sr-m">11/05 $10.16M</div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">+169%</div></div>
+        <div style="font-size:10px;font-weight:700;color:var(--mayo);letter-spacing:.08em;text-transform:uppercase;margin:16px 0 4px">🏪 Tiendanube</div>
+        <div class="super-row"><div class="sr-label">Ingresos totales</div><div class="sr-a">$26.910.058</div><div class="sr-m">$38.351.852</div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">+42.5%</div></div>
+        <div class="super-row"><div class="sr-label">Órdenes</div><div class="sr-a">114</div><div class="sr-m">137 <small style="opacity:.5">18d</small></div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">+20.2%</div></div>
+        <div class="super-row"><div class="sr-label">Ticket promedio</div><div class="sr-a">$224.388</div><div class="sr-m">$261.128</div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">+16.4%</div></div>
+        <div class="super-row"><div class="sr-label">Ingresos/día</div><div class="sr-a">$897K</div><div class="sr-m">$2.13M</div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">+137%</div></div>
+        <div class="super-row"><div class="sr-label">Mejor día</div><div class="sr-a">14/04 $2.97M</div><div class="sr-m">13/05 $6.55M</div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">+121%</div></div>
+        <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.08em;text-transform:uppercase;margin:16px 0 4px">📊 Combinado</div>
+        <div class="super-row"><div class="sr-label">Total ingresos</div><div class="sr-a">$84.960.498</div><div class="sr-m">$97.385.470</div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">+14.6%</div></div>
+        <div class="super-row"><div class="sr-label">Total órdenes</div><div class="sr-a">902</div><div class="sr-m">776 <small style="opacity:.5">18d</small></div><div class="sr-delta" style="background:rgba(52,211,153,.1);color:var(--green)">ritmo +91%</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="card-title">Ingresos ML acumulados día a día</div><div class="ch ch-md"><canvas id="cAcumML"></canvas></div></div>
+        <div class="card"><div class="card-title">Ingresos TN acumulados día a día</div><div class="ch ch-md"><canvas id="cAcumTN"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="g2">
+      <div class="card"><div class="card-title" style="color:var(--abril)">Distribución diaria ML — Abril</div><div class="ch ch-md"><canvas id="cDistAML"></canvas></div></div>
+      <div class="card"><div class="card-title" style="color:var(--mayo)">Distribución diaria ML — Mayo (1–18)</div><div class="ch ch-md"><canvas id="cDistMML"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="g2">
+      <div class="card"><div class="card-title" style="color:var(--abril)">Distribución diaria TN — Abril</div><div class="ch ch-md"><canvas id="cDistATN"></canvas></div></div>
+      <div class="card"><div class="card-title" style="color:var(--mayo)">Distribución diaria TN — Mayo (1–18)</div><div class="ch ch-md"><canvas id="cDistMTN"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DIARIO ===== -->
+<div class="panel" id="panel-diario">
+  <div id="ctx-diario" class="ctx-banner ambos">⚖ Comparación día a día (1–18) Abril vs Mayo</div>
+  <div class="notice">Los días sin venta en TN aparecen como —</div>
+  <div class="sec">
+    <div class="sec-title">ML · Comparación día a día (1–18)</div>
+    <div class="card"><div class="ch ch-xl"><canvas id="cDDML"></canvas></div></div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">TN · Comparación día a día (1–18)</div>
+    <div class="card"><div class="ch ch-xl"><canvas id="cDDTN"></canvas></div></div>
+  </div>
+  <div class="sec">
+    <div class="g2">
+      <div class="card"><div class="card-title">Tabla ML día a día</div><div class="tbl-wrap"><table id="tblDML"></table></div></div>
+      <div class="card"><div class="card-title">Tabla TN día a día</div><div class="tbl-wrap"><table id="tblDTN"></table></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SEMANAL ===== -->
+<div class="panel" id="panel-semanal">
+  <div id="ctx-sem" class="ctx-banner ambos">⚖ Comparativa semanal Abril vs Mayo</div>
+  <div class="notice">Sem 1 = días 1–7 · Sem 2 = 8–14 · Sem 3 = 15–21 · Sem 4 = 22–28 · Sem 5 = 29+. Mayo solo tiene datos hasta Sem 3.</div>
+  <div class="sec">
+    <div class="g2">
+      <div class="card"><div class="card-title">ML · Ingresos semanales</div><div class="ch ch-md"><canvas id="cSemMLv"></canvas></div></div>
+      <div class="card"><div class="card-title">TN · Ingresos semanales</div><div class="ch ch-md"><canvas id="cSemTNv"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="g2">
+      <div class="card"><div class="card-title">ML · Órdenes semanales</div><div class="ch ch-md"><canvas id="cSemMLo"></canvas></div></div>
+      <div class="card"><div class="card-title">TN · Órdenes semanales</div><div class="ch ch-md"><canvas id="cSemTNo"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="g2">
+      <div class="card"><div class="card-title">Resumen semanal ML</div><div class="tbl-wrap"><table id="tblSML"></table></div></div>
+      <div class="card"><div class="card-title">Resumen semanal TN</div><div class="tbl-wrap"><table id="tblSTN"></table></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PRODUCTOS ===== -->
+<div class="panel" id="panel-productos">
+  <div id="ctx-prod" class="ctx-banner ambos">⚖ Mostrando ambos meses</div>
+  <div class="sec">
+    <div class="sec-title">Top 10 · Mercado Libre · por ingresos</div>
+    <div class="g2">
+      <div class="card" id="card-prod-ml-a"><div class="card-title" style="color:var(--abril)">Abril ML — Top 10</div><div class="ch ch-lg"><canvas id="cProdMLA"></canvas></div></div>
+      <div class="card" id="card-prod-ml-m"><div class="card-title" style="color:var(--mayo)">Mayo ML — Top 10 (1–18)</div><div class="ch ch-lg"><canvas id="cProdMLM"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="g2">
+      <div class="card" id="card-tbl-ml-a"><div class="card-title">Tabla ML Abril</div><div class="tbl-wrap"><table id="tblProdMLA"></table></div></div>
+      <div class="card" id="card-tbl-ml-m"><div class="card-title">Tabla ML Mayo</div><div class="tbl-wrap"><table id="tblProdMLM"></table></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">Top 10 · Tiendanube · por ingresos</div>
+    <div class="g2">
+      <div class="card" id="card-prod-tn-a"><div class="card-title" style="color:var(--abril)">Abril TN — Top 10</div><div class="ch ch-lg"><canvas id="cProdTNA"></canvas></div></div>
+      <div class="card" id="card-prod-tn-m"><div class="card-title" style="color:var(--mayo)">Mayo TN — Top 10 (1–18)</div><div class="ch ch-lg"><canvas id="cProdTNM"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="g2">
+      <div class="card" id="card-tbl-tn-a"><div class="card-title">Tabla TN Abril</div><div class="tbl-wrap"><table id="tblProdTNA"></table></div></div>
+      <div class="card" id="card-tbl-tn-m"><div class="card-title">Tabla TN Mayo</div><div class="tbl-wrap"><table id="tblProdTNM"></table></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== GEO ===== -->
+<div class="panel" id="panel-geo">
+  <div id="ctx-geo" class="ctx-banner ambos">⚖ Mostrando ambos meses</div>
+  <div class="sec">
+    <div class="sec-title">Distribución geográfica TN</div>
+    <div class="g2">
+      <div class="card" id="card-geo-a"><div class="card-title" style="color:var(--abril)">Abril TN — Por provincia</div><div id="provA"></div></div>
+      <div class="card" id="card-geo-m"><div class="card-title" style="color:var(--mayo)">Mayo TN (1–18) — Por provincia</div><div id="provM"></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="g2">
+      <div class="card" id="card-geo-ca"><div class="card-title">Top 8 — Abril TN</div><div class="ch ch-lg"><canvas id="cGA"></canvas></div></div>
+      <div class="card" id="card-geo-cm"><div class="card-title">Top 8 — Mayo TN</div><div class="ch ch-lg"><canvas id="cGM"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ================================================================
+// ALL DATA
+// ================================================================
+const DATA = {
+  ml: {
+    abril: [
+      {d:1,v:1071131,o:24},{d:2,v:3510418,o:36},{d:3,v:2218741,o:27},{d:4,v:593645,o:22},
+      {d:5,v:1106653,o:23},{d:6,v:1726458,o:36},{d:7,v:2724843,o:41},{d:8,v:2744457,o:39},
+      {d:9,v:2262010,o:32},{d:10,v:3773981,o:27},{d:11,v:653240,o:17},{d:12,v:2251537,o:23},
+      {d:13,v:2226822,o:31},{d:14,v:2346875,o:36},{d:15,v:3535175,o:49},{d:16,v:995654,o:26},
+      {d:17,v:2055001,o:23},{d:18,v:1072534,o:24},{d:19,v:1785445,o:37},{d:20,v:3427989,o:32},
+      {d:21,v:2657216,o:34},{d:22,v:1847879,o:27},{d:23,v:1400324,o:21},{d:24,v:2069416,o:20},
+      {d:25,v:703221,o:8},{d:26,v:1225386,o:15},{d:27,v:2333130,o:20},{d:28,v:1625335,o:14},
+      {d:29,v:1720120,o:15},{d:30,v:385804,o:9},
+    ],
+    mayo: [
+      {d:1,v:1471721,o:14},{d:2,v:2218209,o:8},{d:3,v:1617887,o:15},{d:4,v:1771604,o:19},
+      {d:5,v:2210244,o:24},{d:6,v:1332181,o:12},{d:7,v:1005415,o:16},{d:8,v:372723,o:8},
+      {d:9,v:293810,o:6},{d:10,v:530552,o:3},{d:11,v:10159097,o:86},{d:12,v:9461369,o:108},
+      {d:13,v:7368163,o:92},{d:14,v:5644800,o:63},{d:15,v:4083575,o:51},{d:16,v:2988889,o:40},
+      {d:17,v:3935799,o:48},{d:18,v:2567580,o:26},
+    ],
+  },
+  tn: {
+    abril: (() => {
+      const m={2:2383187,3:1611636,4:765635,5:178268,6:1676698,7:2934413,8:566592,
+        9:766995,10:626985,11:131499,12:649794,13:855035,14:2966340,15:1655676,16:712030,
+        17:50195,19:85346,20:954420,21:966455,22:1876295,23:1373609,25:480733,26:227317,
+        27:887537,28:162249,29:816397,30:548721};
+      return Array.from({length:30},(_,i)=>({d:i+1,v:m[i+1]||0,o:0}));
+    })(),
+    mayo: (() => {
+      const m={1:530695,2:666559,3:88794,4:1601254,5:807937,6:1818911,7:279107,
+        8:1307308,9:176197,10:655198,11:6010992,12:5930262,13:6548012,14:1967287,
+        15:3268601,16:1500389,17:5060552,18:133797};
+      return Array.from({length:18},(_,i)=>({d:i+1,v:m[i+1]||0,o:0}));
+    })(),
+  },
+  prodML: {
+    abril: [
+      {sku:'(kit/paquete)',  n:'Paquetes sin SKU único (paquetes varios)',               u:0,  v:3758792},
+      {sku:'VMDI2200M',      n:'Martillo Demoledor 30 Kg 2200w 75j Total',               u:2,  v:2598956},
+      {sku:'WFRI0055M',      n:'Fratachadora Allanadora 5.5hp Motor Honda Total',        u:1,  v:2280499},
+      {sku:'VAMI2000M',      n:'Amoladora Angular Industrial 2000w 180mm Total',         u:8,  v:1972991},
+      {sku:'V2V0CM130',      n:'Compresor Inalámbrico 6L 120psi 40v Total',              u:6,  v:1848368},
+      {sku:'WGN00800M',      n:'Grupo Electrógeno Generador 800w Monofásico Total',      u:6,  v:1695806},
+      {sku:'VMRI1051M',      n:'Rotomartillo SDS Plus Profesional 1050w Total',          u:9,  v:1375512},
+      {sku:'VMDI2200M-B',    n:'Martillo Demoledor con Sistema Antivibración Total',     u:1,  v:1293599},
+      {sku:'XCHI14700',      n:'Caja De Herramientas 147 Pcs Industrial Total Azul',     u:3,  v:1266822},
+      {sku:'DEACSA400',      n:'Soplador 400w Dyllu By Total 14000rpm + Tubo',           u:34, v:1192958},
+    ],
+    mayo: [
+      {sku:'XCHI13200',      n:'Caja Porta Herramientas 132 Piezas Box Metálica Total',  u:1,  v:623099},
+      {sku:'VSGI180TM',      n:'Sierra Ingletadora Telescópica Total 1800w',             u:1,  v:564699},
+      {sku:'XCHI14700',      n:'Caja De Herramientas 147 Pcs Industrial Total Azul',     u:1,  v:377899},
+      {sku:'WGN00800M',      n:'Grupo Electrógeno Generador 800w Monofásico Total',      u:1,  v:344899},
+      {sku:'XCEI10000',      n:'Cortadora Cerámica Porcelanato Azulejos Total 1000mm',   u:1,  v:261799},
+      {sku:'XCH010000',      n:'Caja De Herramientas 100 Piezas Total Turquesa',         u:1,  v:253446},
+      {sku:'V2VITI270',      n:'Taladro Percutor 76Nm + Baterías Cargador Total',        u:1,  v:231199},
+      {sku:'V0V0TI081',      n:'Taladro S12 20Nm 0.8-10mm 750rpm + Puntas Total',        u:4,  v:217905},
+      {sku:'VAMI2000M',      n:'Amoladora Angular Industrial 2000w 180mm Total',         u:1,  v:217799},
+      {sku:'V2V0LC080',      n:'Motosierra 20v 8" Brushless Total Verde',                u:1,  v:181099},
+    ],
+  },
+  prodTN: {
+    abril: [
+      {sku:'VTAIKMBCS',  n:'Kit Motosierra 12¨+ Bordeadora + Soplador',          u:3, v:2665498},
+      {sku:'V2VILP160',  n:'Pulidora Lustradora Inalámbrica Brushless 20v',       u:5, v:1280995},
+      {sku:'VTAIKTPL2',  n:'Kit Taladro Percutor 96Nm + Llave Impacto 850Nm',    u:2, v:1215598},
+      {sku:'XCHI15600',  n:'Caja Herramientas 156 Pcs INDUSTRIAL TOTAL',          u:2, v:1055198},
+      {sku:'V2VIAI100',  n:'Atornillador Impacto 20V BL 1/4 230Nm',               u:3, v:815997},
+      {sku:'V2VITI270',  n:'Taladro Percutor 20V BL 2000rpm 76Nm',                u:2, v:632114},
+      {sku:'XCHI13200',  n:'Caja Porta Herramientas 132 Pz Box Metálica',         u:1, v:528858},
+      {sku:'VTPI16660',  n:'Taladro Percutor 16V Brushless 2 Baterías',           u:3, v:497397},
+      {sku:'VSB01502M',  n:'Sierra De Banco 1500w Profesional Total',              u:1, v:492399},
+      {sku:'V2VIKB201',  n:'2 Baterías y Cargador 20V 2.0 Ah',                    u:4, v:485996},
+    ],
+    mayo: [
+      {sku:'VTAIKTPL2',  n:'Kit Taladro Percutor 96Nm + Llave Impacto 850Nm',    u:5, v:2582995},
+      {sku:'WFRI0055M',  n:'Fratachadora 5.5hp Motor Honda Total',                u:1, v:2035299},
+      {sku:'V2VITI251',  n:'Taladro Percutor Brushless 20v 66Nm Con Baterías',    u:7, v:1602993},
+      {sku:'V2VIKB400',  n:'Kit 2 Baterías 4ah Y Cargador Rápido Total',          u:5, v:1144495},
+      {sku:'V42IRM280',  n:'Rotomartillo SDS PLUS 42V BL 28mm (MALETIN)',         u:2, v:838398},
+      {sku:'V4V0CP018',  n:'Cortadora De Cesped 40v 18¨ Total',                   u:1, v:815099},
+      {sku:'VTAIKTALR',  n:'Kit 5 Herramientas Inalámbricas 20V Total',           u:1, v:794999},
+      {sku:'VTAIKMBCS',  n:'Kit Motosierra 12¨+ Bordeadora + Soplador',           u:1, v:792899},
+      {sku:'VTA0K124M',  n:'Kit Taladro 12V + 148 Accesorios TOTAL',              u:6, v:785394},
+      {sku:'VTAIKSPTP',  n:'Kit Sierra Podadora 6¨+ Tijera de Poda TOTAL',        u:2, v:782998},
+    ],
+  },
+  prov: {
+    abril: [
+      {n:'Santa Fe',v:8477644},{n:'Gran Buenos Aires',v:6555894},{n:'Buenos Aires',v:2902986},
+      {n:'Capital Federal',v:2427300},{n:'Tucumán',v:1334121},{n:'Santiago del Estero',v:1055904},
+      {n:'Rio Negro',v:754194},{n:'Neuquén',v:728567},{n:'Catamarca',v:723696},
+      {n:'Chubut',v:713497},{n:'Jujuy',v:334897},{n:'Córdoba',v:233797},
+      {n:'San Luis',v:162799},{n:'Salta',v:140397},{n:'Entre Ríos',v:139550},
+      {n:'La Pampa',v:131499},{n:'San Juan',v:58999},{n:'Formosa',v:18847},{n:'Chaco',v:15469},
+    ],
+    mayo: [
+      {n:'Gran Buenos Aires',v:14986060},{n:'Capital Federal',v:8559297},{n:'Buenos Aires',v:7216636},
+      {n:'Córdoba',v:2055116},{n:'Santa Fe',v:1652656},{n:'Mendoza',v:1335189},
+      {n:'Santiago del Estero',v:650096},{n:'Entre Ríos',v:492417},{n:'Formosa',v:350793},
+      {n:'Rio Negro',v:244999},{n:'La Pampa',v:173999},{n:'Misiones',v:167786},
+      {n:'Jujuy',v:159397},{n:'San Luis',v:126999},{n:'Santa Cruz',v:100999},
+      {n:'Chaco',v:66499},{n:'Neuquén',v:12913},
+    ],
+  },
+};
+
+// ================================================================
+// CHART UTILS
+// ================================================================
+Chart.defaults.color='#6b7290';
+Chart.defaults.font.family="'DM Sans',sans-serif";
+Chart.defaults.font.size=11;
+const gc='rgba(37,42,61,.9)';
+const mf=v=>'$'+Math.round(v).toLocaleString('es-AR');
+const ms=v=>v>=1e6?'$'+(v/1e6).toFixed(2)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+Math.round(v);
+const pC=['#3ecfcf','#ffe033','#a78bfa','#34d399','#f87171','#fb923c','#38bdf8','#e879f9','#a3e635','#fbbf24'];
+function dlt(a,b){const d=(b-a)/a*100;return{up:d>=0,str:(d>=0?'↑ +':'↓ ')+Math.abs(d).toFixed(1)+'%'}}
+
+const chartInstances = {};
+function mkChart(id, type, data, options) {
+  if(chartInstances[id]) chartInstances[id].destroy();
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  chartInstances[id] = new Chart(ctx, {type, data, options});
+  return chartInstances[id];
+}
+function lineOpts(legend=false){
+  return {responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:legend,labels:{boxWidth:10,font:{size:11}}},
+      tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw!=null?mf(ctx.raw):'—'}`}}},
+    scales:{x:{grid:{color:gc},ticks:{maxTicksLimit:15}},y:{grid:{color:gc},ticks:{callback:v=>ms(v)}}}};
+}
+function barOpts(legend=false, stack=false, indexAxis='x'){
+  return {responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    indexAxis,
+    plugins:{legend:{display:legend,labels:{boxWidth:10,font:{size:11}}},
+      tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw!=null?mf(ctx.raw):'—'}`}}},
+    scales:{
+      x:{grid:{color:gc},...(stack?{stacked:true}:{}),ticks:{callback:v=>indexAxis==='x'?ms(v):v}},
+      y:{grid:{color:gc},...(stack?{stacked:true}:{}),ticks:{callback:v=>indexAxis==='y'?v:ms(v)}},
+    }};
+}
+
+function wk(data){
+  const w=[{v:0,o:0},{v:0,o:0},{v:0,o:0},{v:0,o:0},{v:0,o:0}];
+  data.forEach(r=>{const i=r.d<=7?0:r.d<=14?1:r.d<=21?2:r.d<=28?3:4;w[i].v+=r.v;w[i].o+=(r.o||0)});
+  return w;
+}
+const wL=['Sem 1 1–7','Sem 2 8–14','Sem 3 15–21','Sem 4 22–28','Sem 5 29+'];
+const days30=Array.from({length:30},(_,i)=>`${i+1}`);
+const d18L=Array.from({length:18},(_,i)=>`Día ${i+1}`);
+
+// ================================================================
+// MONTH FILTER STATE
+// ================================================================
+let mesFiltro = 'ambos'; // 'abril' | 'mayo' | 'ambos'
+
+function setMes(mes) {
+  mesFiltro = mes;
+  // Update button states
+  ['ambos','abril','mayo'].forEach(m => {
+    document.getElementById('mf-'+m).classList.toggle('active', m === mes);
+  });
+  // Update banners and rebuild charts/tables
+  updateBanners();
+  buildAllCharts();
+  buildAllTables();
+  buildAllProvs();
+  updateKPIs();
+  updateProductCards();
+  updateGeoCards();
+  updateCompCards();
+  updateDiarioCards();
+  updateSemCards();
+}
+
+function bannerClass(mes){ return mes === 'ambos' ? 'ambos' : mes; }
+function bannerText(mes){
+  if(mes==='ambos') return '⚖ Mostrando ambos meses — Abril 2026 completo + Mayo 2026 (1–18)';
+  if(mes==='abril') return '📅 Filtrando por Abril 2026 — 30 días completos';
+  return '📅 Filtrando por Mayo 2026 — días 1 al 18';
+}
+function updateBanners(){
+  ['resumen','comp','diario','sem','prod','geo'].forEach(id=>{
+    const el = document.getElementById('ctx-'+id);
+    if(!el) return;
+    el.className = 'ctx-banner '+bannerClass(mesFiltro);
+    el.textContent = bannerText(mesFiltro);
+  });
+}
+
+// Show/hide cards based on filter
+function setVisible(ids, show){
+  ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=show?'':'none'; });
+}
+function updateProductCards(){
+  const showA = mesFiltro !== 'mayo';
+  const showM = mesFiltro !== 'abril';
+  setVisible(['card-prod-ml-a','card-tbl-ml-a','card-prod-tn-a','card-tbl-tn-a'], showA);
+  setVisible(['card-prod-ml-m','card-tbl-ml-m','card-prod-tn-m','card-tbl-tn-m'], showM);
+}
+function updateGeoCards(){
+  const showA = mesFiltro !== 'mayo';
+  const showM = mesFiltro !== 'abril';
+  setVisible(['card-geo-a','card-geo-ca'], showA);
+  setVisible(['card-geo-m','card-geo-cm'], showM);
+}
+function updateCompCards(){
+  // In comparativo, if single month, hide the other side
+  // (comparativo only makes full sense in 'ambos')
+}
+function updateDiarioCards(){}
+function updateSemCards(){}
+
+// ================================================================
+// KPI UPDATE
+// ================================================================
+function updateKPIs(){
+  const aML=DATA.ml.abril, mML=DATA.ml.mayo;
+  const aTN=DATA.tn.abril, mTN=DATA.tn.mayo;
+  const sumV=arr=>arr.reduce((s,r)=>s+r.v,0);
+  const sumO=arr=>arr.reduce((s,r)=>s+(r.o||0),0);
+
+  const aMLv=sumV(aML), mMLv=sumV(mML);
+  const aTNv=sumV(aTN), mTNv=sumV(mTN);
+  const aMLo=sumO(aML), mMLo=sumO(mML);
+  const aTNo=114, mTNo=137;
+  const aTot=aMLv+aTNv, mTot=mMLv+mTNv;
+
+  const $t=id=>document.getElementById(id);
+
+  if(mesFiltro==='ambos'){
+    $t('kpi-total').textContent = ms(aTot)+' / '+ms(mTot);
+    $t('kpi-total-sub').textContent = 'Abril / Mayo';
+    $t('kpi-ml').textContent = ms(aMLv)+' / '+ms(mMLv);
+    $t('kpi-ml').style.color = 'var(--abril)';
+    $t('kpi-ml-sub').textContent = aMLo+' / '+mMLo+' órdenes';
+    $t('kpi-tn').textContent = ms(aTNv)+' / '+ms(mTNv);
+    $t('kpi-tn').style.color = 'var(--mayo)';
+    $t('kpi-tn-sub').textContent = aTNo+' / '+mTNo+' órdenes';
+    $t('kpi-dia').textContent = ms(aTot/30)+' / '+ms(mTot/18);
+    $t('kpi-dia-sub').textContent = 'Combinado Abril / Mayo';
+  } else if(mesFiltro==='abril'){
+    $t('kpi-total').textContent = ms(aTot);
+    $t('kpi-total').style.color = 'var(--abril)';
+    $t('kpi-total-sub').textContent = 'Abril 2026 · 30 días';
+    $t('kpi-ml').textContent = ms(aMLv);
+    $t('kpi-ml').style.color = 'var(--abril)';
+    $t('kpi-ml-sub').textContent = aMLo+' órdenes ML';
+    $t('kpi-tn').textContent = ms(aTNv);
+    $t('kpi-tn').style.color = 'var(--abril)';
+    $t('kpi-tn-sub').textContent = aTNo+' órdenes TN';
+    $t('kpi-dia').textContent = ms(aTot/30);
+    $t('kpi-dia').style.color = 'var(--abril)';
+    $t('kpi-dia-sub').textContent = 'Promedio diario combinado';
+  } else {
+    $t('kpi-total').textContent = ms(mTot);
+    $t('kpi-total').style.color = 'var(--mayo)';
+    $t('kpi-total-sub').textContent = 'Mayo 2026 · 18 días';
+    $t('kpi-ml').textContent = ms(mMLv);
+    $t('kpi-ml').style.color = 'var(--mayo)';
+    $t('kpi-ml-sub').textContent = mMLo+' órdenes ML';
+    $t('kpi-tn').textContent = ms(mTNv);
+    $t('kpi-tn').style.color = 'var(--mayo)';
+    $t('kpi-tn-sub').textContent = mTNo+' órdenes TN';
+    $t('kpi-dia').textContent = ms(mTot/18);
+    $t('kpi-dia').style.color = 'var(--mayo)';
+    $t('kpi-dia-sub').textContent = 'Promedio diario combinado';
+  }
+}
+
+// ================================================================
+// BUILD CHARTS
+// ================================================================
+function buildAllCharts(){
+  const aML=DATA.ml.abril, mML=DATA.ml.mayo;
+  const aTN=DATA.tn.abril, mTN=DATA.tn.mayo;
+
+  // Helpers to build datasets filtered by mesFiltro
+  const dsML = () => {
+    const ds = [];
+    if(mesFiltro!=='mayo') ds.push({label:'Abril ML',data:aML.map(r=>r.v),borderColor:'rgba(255,224,51,.9)',backgroundColor:'rgba(255,224,51,.05)',fill:true,tension:.35,pointRadius:2,borderWidth:2});
+    if(mesFiltro!=='abril') ds.push({label:'Mayo ML',data:[...mML.map(r=>r.v),...Array(12).fill(null)],borderColor:'rgba(62,207,207,.9)',backgroundColor:'rgba(62,207,207,.05)',fill:true,tension:.35,pointRadius:2,borderWidth:2});
+    return ds;
+  };
+  const dsTN = () => {
+    const ds = [];
+    if(mesFiltro!=='mayo') ds.push({label:'Abril TN',data:aTN.map(r=>r.v),borderColor:'rgba(255,176,32,.7)',backgroundColor:'transparent',tension:.35,pointRadius:2,borderWidth:1.5,borderDash:[4,3]});
+    if(mesFiltro!=='abril') ds.push({label:'Mayo TN',data:[...mTN.map(r=>r.v),...Array(12).fill(null)],borderColor:'rgba(42,168,168,.7)',backgroundColor:'transparent',tension:.35,pointRadius:2,borderWidth:1.5,borderDash:[4,3]});
+    return ds;
+  };
+
+  // Overlay
+  mkChart('cOverlay','line',{labels:days30,datasets:[...dsML(),...dsTN()]},lineOpts(false));
+
+  // Stacked
+  const stackDs = [];
+  if(mesFiltro!=='mayo'){
+    stackDs.push({label:'Abril ML',data:aML.map(r=>r.v),backgroundColor:'rgba(255,224,51,.7)',stack:'A',borderRadius:2});
+    stackDs.push({label:'Abril TN',data:aTN.map(r=>r.v),backgroundColor:'rgba(255,176,32,.6)',stack:'A',borderRadius:2});
+  }
+  if(mesFiltro!=='abril'){
+    stackDs.push({label:'Mayo ML',data:[...mML.map(r=>r.v),...Array(12).fill(0)],backgroundColor:'rgba(62,207,207,.7)',stack:'B',borderRadius:2});
+    stackDs.push({label:'Mayo TN',data:[...mTN.map(r=>r.v),...Array(12).fill(0)],backgroundColor:'rgba(42,168,168,.6)',stack:'B',borderRadius:2});
+  }
+  mkChart('cStacked','bar',{labels:days30,datasets:stackDs},barOpts(true,true));
+
+  // Acumulados
+  if(mesFiltro!=='mayo'){
+    let ac=0; mkChart('cAcumML','line',{labels:days30,datasets:[
+      {label:'Abril',data:aML.map(r=>{ac+=r.v;return ac}),borderColor:'rgba(255,224,51,.9)',backgroundColor:'rgba(255,224,51,.08)',fill:true,tension:.2,pointRadius:2,borderWidth:2},
+      ...(mesFiltro==='ambos'?[{label:'Mayo',data:[...mML.map(r=>{let x=0;mML.slice(0,mML.indexOf(r)+1).forEach(rr=>{x+=rr.v});return x}),...Array(12).fill(null)],borderColor:'rgba(62,207,207,.9)',backgroundColor:'rgba(62,207,207,.08)',fill:true,tension:.2,pointRadius:2,borderWidth:2}]:[])
+    ]},lineOpts(mesFiltro==='ambos'));
+  } else {
+    let ac=0; mkChart('cAcumML','line',{labels:d18L,datasets:[
+      {label:'Mayo',data:mML.map(r=>{ac+=r.v;return ac}),borderColor:'rgba(62,207,207,.9)',backgroundColor:'rgba(62,207,207,.08)',fill:true,tension:.2,pointRadius:2,borderWidth:2}
+    ]},lineOpts(false));
+  }
+  if(mesFiltro!=='mayo'){
+    let ac=0; mkChart('cAcumTN','line',{labels:days30,datasets:[
+      {label:'Abril',data:aTN.map(r=>{ac+=r.v;return ac}),borderColor:'rgba(255,176,32,.9)',backgroundColor:'rgba(255,176,32,.08)',fill:true,tension:.2,pointRadius:2,borderWidth:2},
+      ...(mesFiltro==='ambos'?[{label:'Mayo',data:[...mTN.map(r=>{let x=0;mTN.slice(0,mTN.indexOf(r)+1).forEach(rr=>{x+=rr.v});return x}),...Array(12).fill(null)],borderColor:'rgba(42,168,168,.9)',backgroundColor:'rgba(42,168,168,.08)',fill:true,tension:.2,pointRadius:2,borderWidth:2}]:[])
+    ]},lineOpts(mesFiltro==='ambos'));
+  } else {
+    let ac=0; mkChart('cAcumTN','line',{labels:d18L,datasets:[
+      {label:'Mayo',data:mTN.map(r=>{ac+=r.v;return ac}),borderColor:'rgba(42,168,168,.9)',backgroundColor:'rgba(42,168,168,.08)',fill:true,tension:.2,pointRadius:2,borderWidth:2}
+    ]},lineOpts(false));
+  }
+
+  // Dist charts
+  const distB=(id,data,rgb)=>{
+    const mx=Math.max(...data.map(r=>r.v),1);
+    mkChart(id,'bar',{labels:data.map(r=>`${r.d}`),datasets:[{label:'Ingresos',data:data.map(r=>r.v),
+      backgroundColor:data.map(r=>`rgba(${rgb},${.3+.7*(r.v/mx)})`),borderRadius:3}]},barOpts(false));
+  };
+  if(mesFiltro!=='mayo') distB('cDistAML',aML,'255,224,51');
+  if(mesFiltro!=='abril') distB('cDistMML',mML,'62,207,207');
+  if(mesFiltro!=='mayo') distB('cDistATN',aTN,'255,176,32');
+  if(mesFiltro!=='abril') distB('cDistMTN',mTN,'42,168,168');
+
+  // Diario charts (1-18)
+  const ddML_ds=[];
+  if(mesFiltro!=='mayo') ddML_ds.push({label:'Abril ML',data:aML.slice(0,18).map(r=>r.v),backgroundColor:'rgba(255,224,51,.75)',borderRadius:4});
+  if(mesFiltro!=='abril') ddML_ds.push({label:'Mayo ML',data:mML.map(r=>r.v),backgroundColor:'rgba(62,207,207,.75)',borderRadius:4});
+  mkChart('cDDML','bar',{labels:d18L,datasets:ddML_ds},barOpts(true));
+
+  const ddTN_ds=[];
+  if(mesFiltro!=='mayo') ddTN_ds.push({label:'Abril TN',data:aTN.slice(0,18).map(r=>r.v),backgroundColor:'rgba(255,176,32,.75)',borderRadius:4});
+  if(mesFiltro!=='abril') ddTN_ds.push({label:'Mayo TN',data:mTN.map(r=>r.v),backgroundColor:'rgba(42,168,168,.75)',borderRadius:4});
+  mkChart('cDDTN','bar',{labels:d18L,datasets:ddTN_ds},barOpts(true));
+
+  // Weekly
+  const wMA=wk(aML), wMM=wk(mML), wTA=wk(aTN), wTM=wk(mTN);
+  const semDs=(a,m,cA,cM,key)=>{
+    const ds=[];
+    if(mesFiltro!=='mayo') ds.push({label:'Abril',data:a.map(w=>w[key]),backgroundColor:cA,borderRadius:6});
+    if(mesFiltro!=='abril') ds.push({label:'Mayo', data:m.map(w=>w[key]),backgroundColor:cM,borderRadius:6});
+    return ds;
+  };
+  mkChart('cSemMLv','bar',{labels:wL,datasets:semDs(wMA,wMM,'rgba(255,224,51,.75)','rgba(62,207,207,.75)','v')},barOpts(true));
+  mkChart('cSemTNv','bar',{labels:wL,datasets:semDs(wTA,wTM,'rgba(255,176,32,.75)','rgba(42,168,168,.75)','v')},barOpts(true));
+  mkChart('cSemMLo','bar',{labels:wL,datasets:semDs(wMA,wMM,'rgba(255,224,51,.75)','rgba(62,207,207,.75)','o')},barOpts(true));
+  mkChart('cSemTNo','bar',{labels:wL,datasets:semDs(wTA,wTM,'rgba(255,176,32,.75)','rgba(42,168,168,.75)','o')},barOpts(true));
+
+  // Product charts
+  const hbar=(id,data,colors)=>mkChart(id,'bar',{labels:data.map(p=>p.sku),datasets:[{data:data.map(p=>p.v),backgroundColor:colors,borderRadius:5}]},{...barOpts(false,false,'y'),plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>mf(ctx.raw)}}}});
+  if(mesFiltro!=='mayo'){ hbar('cProdMLA',DATA.prodML.abril,DATA.prodML.abril.map((_,i)=>`hsla(${40+i*8},90%,55%,.8)`)); hbar('cProdTNA',DATA.prodTN.abril,DATA.prodTN.abril.map((_,i)=>`hsla(${175+i*12},65%,55%,.8)`)); }
+  if(mesFiltro!=='abril'){ hbar('cProdMLM',DATA.prodML.mayo, DATA.prodML.mayo.map((_,i) =>`hsla(${175+i*8},70%,55%,.8)`)); hbar('cProdTNM',DATA.prodTN.mayo, DATA.prodTN.mayo.map((_,i) =>`hsla(${175+i*12},65%,55%,.8)`)); }
+
+  // Geo charts
+  const geoBar=(id,data)=>mkChart(id,'bar',{labels:data.slice(0,8).map(p=>p.n),datasets:[{data:data.slice(0,8).map(p=>p.v),backgroundColor:pC,borderRadius:5}]},{...barOpts(false,false,'y'),plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>mf(ctx.raw)}}}});
+  if(mesFiltro!=='mayo') geoBar('cGA',DATA.prov.abril);
+  if(mesFiltro!=='abril') geoBar('cGM',DATA.prov.mayo);
+}
+
+// ================================================================
+// BUILD TABLES
+// ================================================================
+function buildAllTables(){
+  const aML=DATA.ml.abril, mML=DATA.ml.mayo, aTN=DATA.tn.abril, mTN=DATA.tn.mayo;
+
+  function ddTable(id, dataA, dataM, cA, cM){
+    const el = document.getElementById(id); if(!el) return;
+    const showA = mesFiltro!=='mayo', showM = mesFiltro!=='abril';
+    const bothVisible = showA && showM;
+    const rows = bothVisible ? dataA : (showA ? dataA : dataM);
+    el.innerHTML=`<thead><tr>
+      <th>Día</th>
+      ${showA?`<th style="color:${cA}">Abril</th>`:''}
+      ${showM?`<th style="color:${cM}">Mayo</th>`:''}
+      ${bothVisible?`<th>Δ</th>`:''}
+    </tr></thead><tbody>
+    ${Array.from({length:showM?dataM.length:dataA.length},(_,i)=>{
+      const a=dataA[i], mm=dataM?.[i];
+      const av=a?.v||0, mv=mm?.v||0;
+      let dStr='—',dColor='var(--text-muted)';
+      if(bothVisible){
+        if(av&&mv){const dv=dlt(av,mv);dStr=dv.str;dColor=dv.up?'var(--green)':'var(--red)';}
+        else if(!av&&mv){dStr='↑ nuevo';dColor='var(--green)';}
+        else if(av&&!mv){dStr='sin venta';dColor='var(--text-muted)';}
+      }
+      return `<tr>
+        <td class="mono">${String(i+1).padStart(2,'0')}</td>
+        ${showA?`<td class="mono" style="color:${cA}">${av?mf(av):'—'}</td>`:''}
+        ${showM?`<td class="mono" style="color:${cM}">${mv?mf(mv):'—'}</td>`:''}
+        ${bothVisible?`<td style="color:${dColor};font-weight:700;font-size:12px">${dStr}</td>`:''}
+      </tr>`;
+    }).join('')}</tbody>`;
+  }
+  ddTable('tblDML',aML.slice(0,18),mML,'var(--abril)','var(--mayo)');
+  ddTable('tblDTN',aTN.slice(0,18),mTN,'var(--abril)','var(--mayo)');
+
+  // Semanal tables
+  function semTbl(id,wA,wM,cA,cM){
+    const el=document.getElementById(id); if(!el) return;
+    const showA=mesFiltro!=='mayo', showM=mesFiltro!=='abril', both=showA&&showM;
+    el.innerHTML=`<thead><tr>
+      <th>Semana</th>
+      ${showA?`<th style="color:${cA}">Abril</th>`:''}
+      ${showM?`<th style="color:${cM}">Mayo</th>`:''}
+      ${both?`<th>Δ</th>`:''}
+    </tr></thead><tbody>${wA.map((wa,i)=>{
+      const wm=wM[i]; const has=wm&&wm.v>0;
+      const dv=both&&has&&wa.v>0?dlt(wa.v,wm.v):null;
+      return `<tr>
+        <td class="mono" style="font-size:11px">${wL[i]}</td>
+        ${showA?`<td class="mono" style="color:${cA}">${mf(wa.v)}</td>`:''}
+        ${showM?`<td class="mono" style="color:${cM}">${has?mf(wm.v):'—'}</td>`:''}
+        ${both?`<td style="color:${dv==null?'var(--text-muted)':dv.up?'var(--green)':'var(--red)'};font-weight:700;font-size:12px">${dv==null?'—':dv.str}</td>`:''}
+      </tr>`;
+    }).join('')}</tbody>`;
+  }
+  semTbl('tblSML',wk(aML),wk(mML),'var(--abril)','var(--mayo)');
+  semTbl('tblSTN',wk(aTN),wk(mTN),'var(--abril)','var(--mayo)');
+
+  // Product tables
+  function prodTbl(id,data){
+    const el=document.getElementById(id); if(!el) return;
+    el.innerHTML=`<thead><tr><th>#</th><th>SKU</th><th>Producto</th><th>U.</th><th>Ingresos</th></tr></thead>
+    <tbody>${data.map((p,i)=>`<tr>
+      <td style="color:var(--text-muted);font-size:11px">${i+1}</td>
+      <td><span class="badge">${p.sku}</span></td>
+      <td style="font-size:11px">${p.n}</td>
+      <td>${p.u}</td>
+      <td class="mono" style="color:var(--green)">${mf(p.v)}</td>
+    </tr>`).join('')}</tbody>`;
+  }
+  if(mesFiltro!=='mayo'){ prodTbl('tblProdMLA',DATA.prodML.abril); prodTbl('tblProdTNA',DATA.prodTN.abril); }
+  if(mesFiltro!=='abril'){ prodTbl('tblProdMLM',DATA.prodML.mayo);  prodTbl('tblProdTNM',DATA.prodTN.mayo); }
+}
+
+// ================================================================
+// BUILD PROVS
+// ================================================================
+function buildAllProvs(){
+  function provList(id,data){
+    const el=document.getElementById(id); if(!el) return;
+    const mx=data[0].v;
+    el.innerHTML=data.map((p,i)=>`
+      <div class="prov-row">
+        <div class="prov-name">${p.n}</div>
+        <div style="flex:1"><div class="prov-bar-bg"><div class="prov-fill" style="width:${(p.v/mx*100).toFixed(1)}%;background:${pC[i]||'#555'}"></div></div></div>
+        <div class="prov-num">${ms(p.v)}</div>
+      </div>`).join('');
+  }
+  if(mesFiltro!=='mayo') provList('provA',DATA.prov.abril);
+  if(mesFiltro!=='abril') provList('provM',DATA.prov.mayo);
+}
+
+// ================================================================
+// NAV
+// ================================================================
+function nav(btn,id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+id).classList.add('active');
+}
+
+// ================================================================
+// INIT
+// ================================================================
+updateBanners();
+buildAllCharts();
+buildAllTables();
+buildAllProvs();
+updateKPIs();
+updateProductCards();
+updateGeoCards();
+</script>
+</body>
+</html>
