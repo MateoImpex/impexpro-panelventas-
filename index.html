@@ -227,6 +227,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
 /* MARKETPLACE FILTER (sub-filter within Productos) */
 .mp-filter{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
 .mp-btn{padding:5px 14px;font-size:11px;font-weight:600;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.sort-btn{padding:5px 12px;font-size:11px;font-weight:600;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.sort-btn:hover,.sort-btn.active{background:rgba(62,207,207,.12);color:var(--mayo);border-color:var(--mayo);box-shadow:0 0 0 3px rgba(62,207,207,.1)}
 .mp-btn.active{background:var(--surface3);color:var(--text);border-color:var(--border)}
 
 /* PROV/GEO BAR */
@@ -404,6 +406,11 @@ tr:hover td{background:rgba(255,255,255,.015)}
     <button class="mp-btn" data-ch="ML" onclick="setProdCh('ML')">🛒 Mercado Libre</button>
     <button class="mp-btn" data-ch="TN" onclick="setProdCh('TN')">🏪 Tiendanube</button>
   </div>
+  <div class="mp-filter" id="sort-filter" style="margin-top:8px">
+    <span style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-right:4px">Ordenar por →</span>
+    <button class="sort-btn active" data-sort="v" onclick="setProdSort('v')">💰 Ingresos</button>
+    <button class="sort-btn" data-sort="u" onclick="setProdSort('u')">📦 Unidades vendidas</button>
+  </div>
   <div class="card">
     <div class="card-title" id="prod-title">Top 10 productos</div>
     <div class="ch ch-xl"><canvas id="cProductos"></canvas></div>
@@ -487,7 +494,7 @@ const PRESETS = {
   mayo:  { from:'2026-05-01', to:'2026-05-31', label:'Mayo 2026' },
   junio: { from:'2026-06-01', to:'2026-06-18', label:'Junio 2026 (1–18)' },
 };
-let state = { preset:'todos', from:'2026-04-01', to:'2026-06-18', marca:'TODAS', prodCh:'COMB' };
+let state = { preset:'todos', from:'2026-04-01', to:'2026-06-18', marca:'TODAS', prodCh:'COMB', prodSort:'v' };
 let charts = {};
 
 const MONTH_COLOR_HEX = { abril:'#ffe033', mayo:'#3ecfcf', junio:'#a78bfa', todos:'#9aa0c0', custom:'#9aa0c0' };
@@ -557,7 +564,8 @@ function top10(channel, from, to, n=10){
     g[r.s].u += r.u; g[r.s].v += r.v; g[r.s].ch.add(r.c);
     if (!g[r.s].n) g[r.s].n = r.n;
   });
-  return Object.values(g).sort((a,b)=>b.v-a.v).slice(0,n).map(p=>({...p, ch:[...p.ch].sort()}));
+  const sortKey = state.prodSort || 'v';
+  return Object.values(g).sort((a,b)=>b[sortKey]-a[sortKey]).slice(0,n).map(p=>({...p, ch:[...p.ch].sort()}));
 }
 function geoAgg(channel, from, to){
   const f = from||state.from, t = to||state.to;
@@ -612,6 +620,12 @@ function setProdCh(ch){
   state.prodCh = ch;
   document.querySelectorAll('#prod-filter .mp-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('#prod-filter [data-ch="'+ch+'"]').classList.add('active');
+  renderProductos();
+}
+function setProdSort(s){
+  state.prodSort = s;
+  document.querySelectorAll('#sort-filter .sort-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('#sort-filter [data-sort="'+s+'"]').classList.add('active');
   renderProductos();
 }
 
@@ -787,26 +801,30 @@ function renderProductos(){
   applyBanner('ctx-productos');
   const ch = state.prodCh === 'COMB' ? null : state.prodCh;
   const data = top10(ch);
+  const byUnits = state.prodSort === 'u';
   const titleMap = { COMB:'🔗 Top 10 combinado (ML + TN)', ML:'🛒 Top 10 Mercado Libre', TN:'🏪 Top 10 Tiendanube' };
-  $('prod-title').textContent = titleMap[state.prodCh] + ' — ' + periodLabel() + (state.marca!=='TODAS' ? ' · '+state.marca : '');
+  const sortLabel = byUnits ? ' · por unidades' : ' · por ingresos';
+  $('prod-title').textContent = titleMap[state.prodCh] + ' — ' + periodLabel() + (state.marca!=='TODAS' ? ' · '+state.marca : '') + sortLabel;
 
   mkChart('cProductos', {
     type:'bar',
     data:{ labels: data.map(p=>p.n.length>38?p.n.slice(0,38)+'…':p.n),
-           datasets:[{ data: data.map(p=>p.v), backgroundColor:'#ffe033', borderRadius:5 }] },
+           datasets:[{ data: data.map(p=>byUnits?p.u:p.v), backgroundColor: byUnits?'#3ecfcf':'#ffe033', borderRadius:5 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>fmtMoney(c.parsed.x)}} },
-      scales:{ x:{ ticks:{color:'#6b7290', callback:v=>fmtMoney(v)}, grid:{color:'#1e2235'} }, y:{ ticks:{color:'#9aa0c0', font:{size:10}}, grid:{display:false} } } }
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>byUnits?(fmtNum(c.parsed.x)+' uds.'):fmtMoney(c.parsed.x)}} },
+      scales:{ x:{ ticks:{color:'#6b7290', callback:v=>byUnits?fmtNum(v):fmtMoney(v)}, grid:{color:'#1e2235'} }, y:{ ticks:{color:'#9aa0c0', font:{size:10}}, grid:{display:false} } } }
   });
 
   let rows = data.map((p,i)=>{
     const chBadges = state.prodCh==='COMB' ? (p.ch||[]).map(c=>'<span class="badge '+c.toLowerCase()+'">'+c+'</span>').join(' ') : '';
+    const uStyle = byUnits ? 'font-weight:700;color:var(--mayo)' : 'font-weight:600';
+    const vStyle = !byUnits ? 'font-weight:700;color:var(--abril)' : 'font-weight:600';
     return `<tr>
       <td class="mono" style="color:var(--text-muted)">#${i+1}</td>
       <td>${p.n}</td>
       <td class="mono" style="color:var(--text-muted)">${p.sku}</td>
-      <td class="mono">${fmtNum(p.u)}</td>
-      <td class="mono" style="font-weight:600">${fmtMoney(p.v)}</td>
+      <td class="mono" style="${uStyle}">${fmtNum(p.u)} uds.</td>
+      <td class="mono" style="${vStyle}">${fmtMoney(p.v)}</td>
       <td>${chBadges}</td>
     </tr>`;
   }).join('');
